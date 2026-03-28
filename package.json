@@ -165,14 +165,15 @@
     "publish": "vsce publish"
   },
   "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/vsce": "^2.22.0",
     "esbuild": "^0.20.0",
     "eslint": "^8.56.0",
-    "typescript": "^5.3.0",
-    "@vscode/vsce": "^2.22.0"
+    "typescript": "^5.3.0"
   },
   "dependencies": {
     "highlight.js": "^11.9.0",

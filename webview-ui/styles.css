@@ -1,0 +1,286 @@
+/* Base reset and typography */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0 1.5rem 5rem;
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  font-family: var(--vscode-editor-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-size: var(--vscode-editor-font-size, 14px);
+  line-height: 1.6;
+  max-width: 860px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Exercise header */
+.exercise-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 1.5rem 0 0.75rem;
+  border-bottom: 1px solid var(--vscode-panel-border, #444);
+  margin-bottom: 1.5rem;
+}
+
+.exercise-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--vscode-editor-foreground);
+}
+
+.exercise-track {
+  font-size: 0.85rem;
+  color: var(--vscode-descriptionForeground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  padding: 0.15em 0.5em;
+  border-radius: 3px;
+}
+
+/* Content area */
+.content {
+  padding-bottom: 1rem;
+}
+
+/* Markdown rendered content */
+.readme-content h1,
+.readme-content h2,
+.readme-content h3,
+.readme-content h4,
+.readme-content h5,
+.readme-content h6,
+.collapsible-content h1,
+.collapsible-content h2,
+.collapsible-content h3,
+.collapsible-content h4,
+.collapsible-content h5,
+.collapsible-content h6 {
+  color: var(--vscode-editor-foreground);
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.readme-content h1 { font-size: 1.4rem; }
+.readme-content h2 { font-size: 1.2rem; }
+.readme-content h3 { font-size: 1.05rem; }
+
+.readme-content p,
+.collapsible-content p {
+  margin: 0.6em 0 1em;
+}
+
+.readme-content a,
+.collapsible-content a {
+  color: var(--vscode-textLink-foreground);
+  text-decoration: none;
+}
+
+.readme-content a:hover,
+.collapsible-content a:hover {
+  color: var(--vscode-textLink-activeForeground);
+  text-decoration: underline;
+}
+
+/* Inline code */
+.readme-content code:not(.hljs),
+.collapsible-content code:not(.hljs) {
+  font-family: var(--vscode-editor-font-family, 'Courier New', monospace);
+  font-size: 0.9em;
+  background-color: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.15));
+  color: var(--vscode-editor-foreground);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+}
+
+/* Code blocks */
+pre.hljs {
+  background-color: var(--vscode-textCodeBlock-background, #1e1e1e);
+  border: 1px solid var(--vscode-panel-border, #444);
+  border-radius: 5px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+
+pre.hljs code {
+  font-family: var(--vscode-editor-font-family, 'Courier New', monospace);
+  font-size: 0.9em;
+  line-height: 1.5;
+  background: none;
+  padding: 0;
+}
+
+/* Blockquotes */
+.readme-content blockquote,
+.collapsible-content blockquote {
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  border-left: 4px solid var(--vscode-textLink-foreground, #4ec9b0);
+  background-color: var(--vscode-textBlockQuote-background, rgba(127,127,127,0.1));
+  color: var(--vscode-textBlockQuote-border, var(--vscode-editor-foreground));
+}
+
+/* Lists */
+.readme-content ul,
+.readme-content ol,
+.collapsible-content ul,
+.collapsible-content ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0 1em;
+}
+
+.readme-content li,
+.collapsible-content li {
+  margin: 0.25em 0;
+}
+
+/* Tables */
+.readme-content table,
+.collapsible-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.9em;
+}
+
+.readme-content th,
+.readme-content td,
+.collapsible-content th,
+.collapsible-content td {
+  border: 1px solid var(--vscode-panel-border, #444);
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+
+.readme-content th,
+.collapsible-content th {
+  background-color: var(--vscode-list-hoverBackground, rgba(127,127,127,0.1));
+  font-weight: 600;
+}
+
+/* Horizontal rule */
+.readme-content hr,
+.collapsible-content hr {
+  border: none;
+  border-top: 1px solid var(--vscode-panel-border, #444);
+  margin: 1.5em 0;
+}
+
+/* Collapsible sections (details/summary) */
+.collapsible-section {
+  margin: 1.5rem 0;
+  border: 1px solid var(--vscode-panel-border, #444);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.collapsible-section > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--vscode-list-hoverBackground, rgba(127,127,127,0.07));
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--vscode-editor-foreground);
+  user-select: none;
+  list-style: none;
+}
+
+.collapsible-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible-section > summary::before {
+  content: '▶';
+  font-size: 0.7em;
+  transition: transform 0.15s ease;
+  display: inline-block;
+  color: var(--vscode-descriptionForeground);
+}
+
+.collapsible-section[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.collapsible-section > summary:hover {
+  background-color: var(--vscode-list-activeSelectionBackground, rgba(127,127,127,0.15));
+}
+
+.collapsible-content {
+  padding: 0.75rem 1rem 0.25rem;
+  border-top: 1px solid var(--vscode-panel-border, #444);
+}
+
+/* Action button bar */
+.action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  border-top: 1px solid var(--vscode-panel-border, #444);
+  z-index: 100;
+}
+
+.action-button {
+  padding: 0.4em 1em;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 3px;
+  font-size: 0.9em;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  background-color: var(--vscode-button-secondaryBackground, rgba(127,127,127,0.2));
+  color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
+}
+
+.action-button:hover {
+  opacity: 0.85;
+}
+
+.action-button:active {
+  opacity: 0.7;
+}
+
+.action-button.primary {
+  background-color: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #fff);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.action-button.primary:hover {
+  background-color: var(--vscode-button-hoverBackground, #1177bb);
+}
+
+.action-button.secondary {
+  background-color: transparent;
+  color: var(--vscode-textLink-foreground);
+  border-color: var(--vscode-textLink-foreground);
+}
+
+.action-button.secondary:hover {
+  background-color: var(--vscode-textLink-foreground);
+  color: var(--vscode-editor-background);
+}
+
+/* Highlight.js theme overrides for VS Code dark/light compatibility */
+.hljs {
+  color: var(--vscode-editor-foreground);
+  background: transparent;
+}
