@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.1] - 2026-03-28
+
+### Changed
+- Optimize bundle size from 2MB to 361KB by importing only Exercism-relevant highlight.js languages instead of all 197
+
 ## [0.1.0] - 2026-03-28
 
 ### Added

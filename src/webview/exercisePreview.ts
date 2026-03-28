@@ -6,8 +6,34 @@ import { Exercise } from '../models/exercise';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const MarkdownIt = require('markdown-it') as typeof import('markdown-it');
+
+// Use highlight.js core + only Exercism track languages to keep bundle small
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const hljs: HLJSApi = require('highlight.js').default ?? require('highlight.js');
+const hljs: HLJSApi = require('highlight.js/lib/core').default ?? require('highlight.js/lib/core');
+
+// Register only languages used by Exercism tracks
+const exercismLanguages: Record<string, string> = {
+  bash: 'bash', c: 'c', clojure: 'clojure', coffeescript: 'coffeescript',
+  coq: 'coq', cpp: 'cpp', crystal: 'crystal', csharp: 'csharp',
+  d: 'd', dart: 'dart', delphi: 'delphi', elixir: 'elixir', elm: 'elm',
+  erlang: 'erlang', fortran: 'fortran', fsharp: 'fsharp', go: 'go',
+  groovy: 'groovy', haskell: 'haskell', java: 'java',
+  javascript: 'javascript', julia: 'julia', kotlin: 'kotlin',
+  lisp: 'lisp', lua: 'lua', mipsasm: 'mipsasm', nim: 'nim',
+  objectivec: 'objectivec', ocaml: 'ocaml', perl: 'perl', php: 'php',
+  powershell: 'powershell', prolog: 'prolog', python: 'python', r: 'r',
+  reasonml: 'reasonml', ruby: 'ruby', rust: 'rust', scala: 'scala',
+  scheme: 'scheme', smalltalk: 'smalltalk', sml: 'sml', swift: 'swift',
+  tcl: 'tcl', typescript: 'typescript', vbnet: 'vbnet', vim: 'vim',
+  wasm: 'wasm', wren: 'wren', x86asm: 'x86asm',
+  // Common extras for code blocks in exercise READMEs
+  json: 'json', xml: 'xml', yaml: 'yaml', sql: 'sql', shell: 'shell',
+  makefile: 'makefile', plaintext: 'plaintext', diff: 'diff',
+};
+for (const [name, mod] of Object.entries(exercismLanguages)) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  hljs.registerLanguage(name, require(`highlight.js/lib/languages/${mod}`));
+}
 
 type MdInstance = InstanceType<typeof MarkdownIt>;
 
