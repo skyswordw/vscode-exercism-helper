@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { WorkspaceScanner, ScannedTrack, ScannedExercise, ExerciseStatus as ScannerExerciseStatus } from '../workspace/workspaceScanner';
+import { WorkspaceScanner, ScannedTrack, ScannedExercise } from '../workspace/workspaceScanner';
 import { Track, Exercise, ExerciseStatus, slugToName } from '../models';
 import { TrackItem } from './trackItem';
 import { ExerciseItem } from './exerciseItem';
@@ -59,9 +59,7 @@ export class ExercismTreeProvider implements vscode.TreeDataProvider<TreeNode> {
       name: slugToName(scanned.slug),
       track: scanned.track,
       path: scanned.path,
-      status: scanned.status === ScannerExerciseStatus.Downloaded
-        ? ExerciseStatus.Downloaded
-        : ExerciseStatus.NotDownloaded,
+      status: scanned.status,
       hasReadme: scanned.hasReadme,
       hasHints: scanned.hasHints,
       hasHelp,

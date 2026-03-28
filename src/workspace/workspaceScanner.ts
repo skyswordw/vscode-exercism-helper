@@ -3,11 +3,7 @@ import * as fs from 'fs';
 import * as fsp from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-
-export enum ExerciseStatus {
-  Downloaded = 'downloaded',
-  NotDownloaded = 'not_downloaded',
-}
+import { ExerciseStatus } from '../models/exercise';
 
 export interface ScannedExercise {
   slug: string;
@@ -119,11 +115,13 @@ export class WorkspaceScanner {
         });
       }
 
-      tracks.push({
-        slug: trackSlug,
-        path: trackPath,
-        exercises,
-      });
+      if (exercises.length > 0) {
+        tracks.push({
+          slug: trackSlug,
+          path: trackPath,
+          exercises,
+        });
+      }
     }
 
     return tracks;

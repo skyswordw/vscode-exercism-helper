@@ -120,6 +120,15 @@ export class ExercisePreviewPanel {
     }
   }
 
+  private _escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   private _getNonce(): string {
     let text = '';
     const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -176,12 +185,12 @@ export class ExercisePreviewPanel {
   <meta http-equiv="Content-Security-Policy" content="${csp}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="${stylesUri}">
-  <title>${exercise.name} - ${exercise.track}</title>
+  <title>${this._escapeHtml(exercise.name)} - ${this._escapeHtml(exercise.track)}</title>
 </head>
 <body>
   <div class="exercise-header">
-    <h1 class="exercise-title">${exercise.name}</h1>
-    <span class="exercise-track">${exercise.track}</span>
+    <h1 class="exercise-title">${this._escapeHtml(exercise.name)}</h1>
+    <span class="exercise-track">${this._escapeHtml(exercise.track)}</span>
   </div>
 
   <div class="content">

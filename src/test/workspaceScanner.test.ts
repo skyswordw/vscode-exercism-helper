@@ -21,7 +21,8 @@ vi.mock('fs/promises', async () => {
 
 import * as fs from 'fs';
 import * as fsp from 'fs/promises';
-import { WorkspaceScanner, ExerciseStatus } from '../workspace/workspaceScanner';
+import { WorkspaceScanner } from '../workspace/workspaceScanner';
+import { ExerciseStatus } from '../models/exercise';
 
 const mockExistsSync = vi.mocked(fs.existsSync);
 const mockReaddir = vi.mocked(fsp.readdir);
@@ -122,17 +123,23 @@ describe('WorkspaceScanner', () => {
         .mockResolvedValueOnce([makeDirent('not-an-exercise', true)] as any);
 
       const tracks = await scanner.scan();
-      expect(tracks).toHaveLength(1);
-      expect(tracks[0].exercises).toHaveLength(0);
+      // Empty tracks are filtered out
+      expect(tracks).toHaveLength(0);
     });
 
     it('skips non-directory entries at track level', async () => {
-      mockExistsSync.mockImplementation((p: fs.PathLike) => String(p) === WORKSPACE);
+      mockExistsSync.mockImplementation((p: fs.PathLike) => {
+        const s = String(p);
+        if (s === WORKSPACE) return true;
+        if (s === `${WORKSPACE}/python/hello-world/.exercism/metadata.json`) return true;
+        if (s === `${WORKSPACE}/python/hello-world/README.md`) return true;
+        return false;
+      });
 
       mockReaddir.mockResolvedValueOnce([
         makeDirent('some-file.txt', false),
         makeDirent('python', true),
-      ] as any).mockResolvedValueOnce([] as any);
+      ] as any).mockResolvedValueOnce([makeDirent('hello-world', true)] as any);
 
       const tracks = await scanner.scan();
       expect(tracks).toHaveLength(1);

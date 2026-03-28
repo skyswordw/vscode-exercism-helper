@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { ExercismCli } from './cli/exercismCli';
 import { WorkspaceScanner } from './workspace/workspaceScanner';
 import { ExercismTreeProvider } from './views/exercismTreeProvider';
@@ -70,9 +68,7 @@ export function activate(context: vscode.ExtensionContext): void {
 					return;
 				}
 
-				// Run configure with token
-				const cliPath = vscode.workspace.getConfiguration('exercism').get<string>('cliPath', 'exercism');
-				await promisify(execFile)(cliPath, ['configure', '--token', token]);
+				await cli.configure(token);
 
 				vscode.window.showInformationMessage('Exercism CLI configured successfully!');
 				treeProvider.refresh();
@@ -91,12 +87,28 @@ export function activate(context: vscode.ExtensionContext): void {
 				return;
 			}
 
-			const track = await vscode.window.showInputBox({
-				prompt: 'Enter the track slug (e.g., python, javascript, go)',
-				placeHolder: 'python',
+			// Show QuickPick with existing tracks, plus option to type custom
+			const scannedTracks = await scanner.scan();
+			const trackItems = scannedTracks.map(t => t.slug);
+			trackItems.push('$(add) Enter track slug manually...');
+
+			const trackPick = await vscode.window.showQuickPick(trackItems, {
+				placeHolder: 'Select a track or enter manually',
 			});
-			if (!track) {
+			if (!trackPick) {
 				return;
+			}
+
+			let track: string;
+			if (trackPick.startsWith('$(add)')) {
+				const input = await vscode.window.showInputBox({
+					prompt: 'Enter the track slug (e.g., python, javascript, go)',
+					placeHolder: 'python',
+				});
+				if (!input) { return; }
+				track = input;
+			} else {
+				track = trackPick;
 			}
 
 			const exercise = await vscode.window.showInputBox({
@@ -144,6 +156,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('exercism.test', async (exerciseArg?: Exercise) => {
+			const { installed } = await cli.checkInstalled();
+			if (!installed) { showCliNotInstalledError(); return; }
+
 			const exercise = exerciseArg ?? (await detectExercise(scanner));
 			if (!exercise) {
 				vscode.window.showWarningMessage('No exercise detected. Open an exercise file first.');
@@ -182,6 +197,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('exercism.submit', async (exerciseArg?: Exercise) => {
+			const { installed } = await cli.checkInstalled();
+			if (!installed) { showCliNotInstalledError(); return; }
+
 			const exercise = exerciseArg ?? (await detectExercise(scanner));
 			if (!exercise) {
 				vscode.window.showWarningMessage('No exercise detected. Open an exercise file first.');
@@ -206,9 +224,10 @@ export function activate(context: vscode.ExtensionContext): void {
 					outputChannel.appendLine(result.output);
 
 					if (result.success) {
+						const buttons = result.url ? ['Open in Browser'] : [];
 						const action = await vscode.window.showInformationMessage(
 							`Solution submitted for ${exercise.slug}!`,
-							result.url ? 'Open in Browser' : ''
+							...buttons
 						);
 						if (action === 'Open in Browser' && result.url) {
 							vscode.env.openExternal(vscode.Uri.parse(result.url));

@@ -83,6 +83,10 @@ export class ExercismCli {
     return match ? match[1].trim() : '';
   }
 
+  async configure(token: string): Promise<void> {
+    await this.run(['configure', '--token', token]);
+  }
+
   async download(
     track: string,
     exercise: string,
