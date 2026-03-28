@@ -42,6 +42,26 @@ export class ExercisePreviewPanel {
         case 'openInBrowser':
           vscode.commands.executeCommand('exercism.openInBrowser', this._exercise);
           break;
+        case 'copyInstructions': {
+          // Copy README markdown content to clipboard for pasting into AI chat
+          const readmePath = path.join(this._exercise.path, 'README.md');
+          try {
+            const content = fs.readFileSync(readmePath, 'utf8');
+            vscode.env.clipboard.writeText(content);
+            vscode.window.showInformationMessage('Instructions copied to clipboard');
+          } catch {
+            vscode.window.showWarningMessage('Could not read README.md');
+          }
+          break;
+        }
+        case 'openReadmeFile': {
+          // Open README.md as a regular editor file (can be dragged to Copilot/@-referenced)
+          const readmePath = path.join(this._exercise.path, 'README.md');
+          vscode.workspace.openTextDocument(readmePath).then(doc => {
+            vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
+          });
+          break;
+        }
       }
     });
 
@@ -51,6 +71,9 @@ export class ExercisePreviewPanel {
   }
 
   static show(exercise: Exercise, extensionUri: vscode.Uri): ExercisePreviewPanel {
+    const readerPosition = vscode.workspace.getConfiguration('exercism').get<string>('readerPosition', 'left');
+    const webviewColumn = readerPosition === 'left' ? vscode.ViewColumn.One : vscode.ViewColumn.Beside;
+
     const md = new MarkdownIt({
       html: false,
       linkify: true,
@@ -83,14 +106,14 @@ export class ExercisePreviewPanel {
           ExercisePreviewPanel.currentPanel._panel.webview,
           exercise
         );
-      ExercisePreviewPanel.currentPanel._panel.reveal(vscode.ViewColumn.Beside);
+      ExercisePreviewPanel.currentPanel._panel.reveal(webviewColumn);
       return ExercisePreviewPanel.currentPanel;
     }
 
     const panel = vscode.window.createWebviewPanel(
       'exercismInstructions',
       `${exercise.name} - ${exercise.track}`,
-      vscode.ViewColumn.Beside,
+      webviewColumn,
       {
         enableScripts: true,
         localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'webview-ui')],
@@ -102,14 +125,20 @@ export class ExercisePreviewPanel {
     return ExercisePreviewPanel.currentPanel;
   }
 
+  static getCurrentExercise(): Exercise | undefined {
+    return ExercisePreviewPanel.currentPanel?._exercise;
+  }
+
+  static dispose(): void {
+    if (ExercisePreviewPanel.currentPanel) {
+      ExercisePreviewPanel.currentPanel._panel.dispose();
+    }
+  }
+
   update(exercise: Exercise): void {
     this._exercise = exercise;
     this._panel.title = `${exercise.name} - ${exercise.track}`;
     this._panel.webview.html = this._getHtmlContent(this._panel.webview, exercise);
-  }
-
-  dispose(): void {
-    this._panel.dispose();
   }
 
   private _readFile(filePath: string): string | undefined {
@@ -202,9 +231,11 @@ export class ExercisePreviewPanel {
   </div>
 
   <div class="action-bar">
-    <button class="action-button primary" id="btn-run-tests">Run Tests</button>
-    <button class="action-button" id="btn-submit">Submit</button>
-    <button class="action-button secondary" id="btn-open-browser">Open in Browser</button>
+    <button class="action-button primary" id="btn-run-tests">▶ Run Tests</button>
+    <button class="action-button" id="btn-submit">⬆ Submit</button>
+    <button class="action-button secondary" id="btn-copy">📋 Copy Instructions</button>
+    <button class="action-button secondary" id="btn-open-file">📄 Open as File</button>
+    <button class="action-button secondary" id="btn-open-browser">🌐 Browser</button>
   </div>
 
   <script nonce="${nonce}">
@@ -228,6 +259,14 @@ export class ExercisePreviewPanel {
 
       document.getElementById('btn-submit').addEventListener('click', function() {
         vscode.postMessage({ command: 'submit' });
+      });
+
+      document.getElementById('btn-copy').addEventListener('click', function() {
+        vscode.postMessage({ command: 'copyInstructions' });
+      });
+
+      document.getElementById('btn-open-file').addEventListener('click', function() {
+        vscode.postMessage({ command: 'openReadmeFile' });
       });
 
       document.getElementById('btn-open-browser').addEventListener('click', function() {

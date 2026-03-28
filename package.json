@@ -12,6 +12,7 @@
     "Education",
     "Other"
   ],
+  "icon": "media/icon.svg",
   "keywords": [
     "exercism",
     "programming challenges",
@@ -39,6 +40,11 @@
         "icon": "$(cloud-download)"
       },
       {
+        "command": "exercism.downloadExercise",
+        "title": "Exercism: Download This Exercise",
+        "icon": "$(cloud-download)"
+      },
+      {
         "command": "exercism.test",
         "title": "Exercism: Run Tests",
         "icon": "$(play)"
@@ -62,6 +68,21 @@
         "command": "exercism.refreshTree",
         "title": "Exercism: Refresh",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "exercism.toggleLayout",
+        "title": "Exercism: Toggle Reader Position",
+        "icon": "$(arrow-swap)"
+      },
+      {
+        "command": "exercism.toggleSort",
+        "title": "Exercism: Toggle Sort Order",
+        "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "exercism.expandAll",
+        "title": "Exercism: Expand All",
+        "icon": "$(expand-all)"
       }
     ],
     "viewsContainers": {
@@ -85,7 +106,7 @@
     "viewsWelcome": [
       {
         "view": "exercismExplorer",
-        "contents": "No Exercism workspace found.\n[Configure Workspace](command:exercism.configure)\n\nMake sure the Exercism CLI is installed and configured.\n[Learn More](https://exercism.org/docs/using/solving-exercises/working-locally)"
+        "contents": "Welcome to Exercism Helper!\n\nTo get started:\n1. [Install Exercism CLI](https://exercism.org/docs/using/solving-exercises/working-locally) if you haven't already\n2. [Get your API Token](https://exercism.org/settings/api_cli) from exercism.org\n3. Click below to configure:\n\n[Configure Exercism](command:exercism.configure)\n\nAlready configured? Click refresh if your exercises don't appear.\n[Refresh](command:exercism.refreshTree)"
       }
     ],
     "menus": {
@@ -99,18 +120,43 @@
           "command": "exercism.download",
           "when": "view == exercismExplorer",
           "group": "navigation"
+        },
+        {
+          "command": "exercism.toggleLayout",
+          "when": "view == exercismExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "exercism.toggleSort",
+          "when": "view == exercismExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "exercism.expandAll",
+          "when": "view == exercismExplorer",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
+        {
+          "command": "exercism.downloadExercise",
+          "when": "view == exercismExplorer && viewItem == exerciseRemote",
+          "group": "inline"
+        },
         {
           "command": "exercism.test",
           "when": "view == exercismExplorer && viewItem == exercise",
           "group": "inline"
         },
         {
-          "command": "exercism.openInstructions",
+          "command": "exercism.submit",
           "when": "view == exercismExplorer && viewItem == exercise",
           "group": "inline"
+        },
+        {
+          "command": "exercism.downloadExercise",
+          "when": "view == exercismExplorer && viewItem == exerciseRemote",
+          "group": "1_actions@0"
         },
         {
           "command": "exercism.test",
@@ -152,6 +198,12 @@
           "default": 60000,
           "description": "CLI command timeout in milliseconds.",
           "minimum": 5000
+        },
+        "exercism.readerPosition": {
+          "type": "string",
+          "enum": ["left", "right"],
+          "default": "left",
+          "description": "Position of the exercise instruction panel. 'left' = reader on left, editor on right. 'right' = reader on right, editor on left."
         }
       }
     }

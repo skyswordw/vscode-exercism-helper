@@ -4,3 +4,4 @@ dist/
 .vscode-test/
 out/
 .DS_Store
+exercism-debug.log

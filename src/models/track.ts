@@ -5,4 +5,5 @@ export interface Track {
   name: string;           // Display name, e.g., "Python" (derived from slug)
   path: string;           // Absolute path to track directory
   exercises: Exercise[];
+  totalExercises?: number; // Total exercises from API (may be > downloaded count)
 }
