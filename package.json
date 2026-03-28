@@ -3,7 +3,7 @@
   "displayName": "Exercism Helper",
   "description": "Complete programming challenges in different languages to improve your skills — browse, download, test, and submit Exercism exercises without leaving VS Code.",
   "version": "0.1.0",
-  "publisher": "exercism-helper",
+  "publisher": "skywalkerw",
   "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
