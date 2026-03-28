@@ -1,0 +1,181 @@
+{
+  "name": "exercism-helper",
+  "displayName": "Exercism Helper",
+  "description": "Complete programming challenges in different languages to improve your skills — browse, download, test, and submit Exercism exercises without leaving VS Code.",
+  "version": "0.1.0",
+  "publisher": "exercism-helper",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Education",
+    "Other"
+  ],
+  "keywords": [
+    "exercism",
+    "programming challenges",
+    "practice",
+    "algorithms",
+    "coding exercises"
+  ],
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "activationEvents": [
+    "workspaceContains:**/.exercism/metadata.json"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "exercism.configure",
+        "title": "Exercism: Configure"
+      },
+      {
+        "command": "exercism.download",
+        "title": "Exercism: Download Exercise",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "exercism.test",
+        "title": "Exercism: Run Tests",
+        "icon": "$(play)"
+      },
+      {
+        "command": "exercism.submit",
+        "title": "Exercism: Submit Solution",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "exercism.openInstructions",
+        "title": "Exercism: View Instructions",
+        "icon": "$(book)"
+      },
+      {
+        "command": "exercism.openInBrowser",
+        "title": "Exercism: Open in Browser",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "exercism.refreshTree",
+        "title": "Exercism: Refresh",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "exercism",
+          "title": "Exercism",
+          "icon": "media/exercism-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "exercism": [
+        {
+          "id": "exercismExplorer",
+          "name": "Exercises",
+          "icon": "media/exercism-icon.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "exercismExplorer",
+        "contents": "No Exercism workspace found.\n[Configure Workspace](command:exercism.configure)\n\nMake sure the Exercism CLI is installed and configured.\n[Learn More](https://exercism.org/docs/using/solving-exercises/working-locally)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "exercism.refreshTree",
+          "when": "view == exercismExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "exercism.download",
+          "when": "view == exercismExplorer",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "exercism.test",
+          "when": "view == exercismExplorer && viewItem == exercise",
+          "group": "inline"
+        },
+        {
+          "command": "exercism.openInstructions",
+          "when": "view == exercismExplorer && viewItem == exercise",
+          "group": "inline"
+        },
+        {
+          "command": "exercism.test",
+          "when": "view == exercismExplorer && viewItem == exercise",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "exercism.submit",
+          "when": "view == exercismExplorer && viewItem == exercise",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "exercism.openInstructions",
+          "when": "view == exercismExplorer && viewItem == exercise",
+          "group": "2_view@1"
+        },
+        {
+          "command": "exercism.openInBrowser",
+          "when": "view == exercismExplorer && viewItem == exercise",
+          "group": "2_view@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Exercism",
+      "properties": {
+        "exercism.workspacePath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom Exercism workspace directory path. Leave empty to auto-detect from CLI configuration."
+        },
+        "exercism.cliPath": {
+          "type": "string",
+          "default": "exercism",
+          "description": "Path to the Exercism CLI binary."
+        },
+        "exercism.cliTimeout": {
+          "type": "number",
+          "default": 60000,
+          "description": "CLI command timeout in milliseconds.",
+          "minimum": 5000
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "watch": "npm run compile -- --watch",
+    "lint": "eslint src --ext ts",
+    "test": "node --import tsx src/test/runTests.ts",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  },
+  "dependencies": {
+    "highlight.js": "^11.9.0",
+    "markdown-it": "^14.0.0"
+  }
+}
