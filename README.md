@@ -15,6 +15,8 @@
   <img src="https://img.shields.io/badge/VS%20Code-%3E%3D1.85.0-blue?logo=visualstudiocode" alt="VS Code">
   <img src="https://img.shields.io/badge/Exercism%20CLI-%3E%3D3.3.0-purple" alt="Exercism CLI">
   <img src="https://img.shields.io/badge/TypeScript-5.3-blue?logo=typescript&logoColor=white" alt="TypeScript">
+  <a href="https://marketplace.visualstudio.com/items?itemName=skywalkerw.exercism-helper"><img src="https://img.shields.io/visual-studio-marketplace/v/skywalkerw.exercism-helper?label=VS%20Marketplace&logo=visualstudiocode" alt="VS Marketplace"></a>
+  <a href="https://open-vsx.org/extension/skywalkerw/exercism-helper"><img src="https://img.shields.io/open-vsx/v/skywalkerw/exercism-helper?label=Open%20VSX" alt="Open VSX"></a>
   <a href="https://github.com/skyswordw/vscode-exercism-helper/stargazers"><img src="https://img.shields.io/github/stars/skyswordw/vscode-exercism-helper?style=flat&color=yellow" alt="Stars"></a>
 </p>
 
@@ -40,6 +42,10 @@
 - **Sort Exercises** — Sort by learning path, reversed, easy-to-hard, or hard-to-easy
 - **AI-friendly** — Copy instructions to clipboard or open as file for Copilot/@-referencing
 - **Theme-aware UI** — Webview adapts to light, dark, and high-contrast themes
+
+<p align="center">
+  <img src="media/screenshot.png" alt="Exercism Helper Screenshot" width="900">
+</p>
 
 ### Status Icons
 
