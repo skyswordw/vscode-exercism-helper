@@ -22,7 +22,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/skyswordw/vscode-exercism-helper"
   },
   "activationEvents": [
     "workspaceContains:**/.exercism/metadata.json"

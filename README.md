@@ -1,6 +1,19 @@
-# Exercism Helper
+<p align="center">
+  <img src="media/exercism-icon.svg" alt="Exercism Helper Logo" width="128" height="48">
+</p>
 
-Browse, download, test, and submit Exercism exercises without leaving VS Code.
+<h1 align="center">Exercism Helper</h1>
+
+<p align="center">
+  Browse, download, test, and submit Exercism exercises without leaving VS Code.
+</p>
+
+<p align="center">
+  <a href="https://github.com/skyswordw/vscode-exercism-helper">GitHub</a> ·
+  <a href="https://exercism.org">Exercism</a>
+</p>
+
+---
 
 ## Features
 
