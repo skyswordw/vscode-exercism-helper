@@ -160,7 +160,7 @@
     "compile": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
     "watch": "npm run compile -- --watch",
     "lint": "eslint src --ext ts",
-    "test": "node --import tsx src/test/runTests.ts",
+    "test": "vitest run",
     "package": "vsce package",
     "publish": "vsce publish"
   },
@@ -173,7 +173,8 @@
     "@vscode/vsce": "^2.22.0",
     "esbuild": "^0.20.0",
     "eslint": "^8.56.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "vitest": "^4.1.2"
   },
   "dependencies": {
     "highlight.js": "^11.9.0",
