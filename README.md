@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="media/icon.svg" alt="Exercism Helper Logo" width="128" height="128">
+  <img src="media/icon.png" alt="Exercism Helper Logo" width="128" height="128">
 </p>
 
 <h1 align="center">Exercism Helper</h1>
