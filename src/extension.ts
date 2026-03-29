@@ -27,6 +27,18 @@ export function activate(context: vscode.ExtensionContext): void {
 	const cli = new ExercismCli();
 	const scanner = new WorkspaceScanner(() => cli.getConfig());
 
+	// Set context for welcome view conditional display
+	async function updateConfiguredContext() {
+		let configured = false;
+		try {
+			const config = await cli.getConfig();
+			configured = !!config.token;
+		} catch { /* not configured */ }
+		vscode.commands.executeCommand('setContext', 'exercism.configured', configured);
+		log(`Context exercism.configured = ${configured}`);
+	}
+	updateConfiguredContext();
+
 	// Log startup diagnostics
 	cli.checkInstalled().then(result => {
 		log(`CLI check: installed=${result.installed}, version=${result.version ?? 'N/A'}`);
@@ -87,11 +99,7 @@ export function activate(context: vscode.ExtensionContext): void {
 					'Install CLI',
 					'How to Install'
 				);
-				if (action === 'Install CLI') {
-					vscode.env.openExternal(vscode.Uri.parse(
-						'https://exercism.org/docs/using/solving-exercises/working-locally'
-					));
-				} else if (action === 'How to Install') {
+				if (action === 'Install CLI' || action === 'How to Install') {
 					vscode.env.openExternal(vscode.Uri.parse(
 						'https://exercism.org/docs/using/solving-exercises/working-locally'
 					));
@@ -99,9 +107,28 @@ export function activate(context: vscode.ExtensionContext): void {
 				return;
 			}
 
-			// Step 2: Guide user to get API token
+			// Step 2: Check if already configured
+			let existingToken = '';
+			try {
+				const config = await cli.getConfig();
+				existingToken = config.token;
+			} catch { /* not configured */ }
+
+			if (existingToken) {
+				const masked = '****' + existingToken.slice(-4);
+				const action = await vscode.window.showInformationMessage(
+					`Exercism is already configured (token: ${masked}).`,
+					'Reconfigure',
+					'Cancel'
+				);
+				if (action !== 'Reconfigure') {
+					return;
+				}
+			}
+
+			// Step 3: Guide user to get API token
 			const action = await vscode.window.showInformationMessage(
-				'To configure Exercism, you need your API token. You can find it on your Exercism settings page.',
+				'To configure Exercism, you need your API token from exercism.org.',
 				'Get API Token',
 				'I Have a Token'
 			);
@@ -112,36 +139,36 @@ export function activate(context: vscode.ExtensionContext): void {
 
 			if (action === 'Get API Token') {
 				vscode.env.openExternal(vscode.Uri.parse('https://exercism.org/settings/api_cli'));
-				// Show input after opening browser
-				const token = await vscode.window.showInputBox({
-					prompt: 'Paste your API token from exercism.org/settings/api_cli',
-					placeHolder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-					password: true,
-					ignoreFocusOut: true,
-				});
-				if (!token) { return; }
-				await configureWithToken(token);
-			} else {
-				const token = await vscode.window.showInputBox({
-					prompt: 'Enter your Exercism API token',
-					placeHolder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-					password: true,
-					ignoreFocusOut: true,
-				});
-				if (!token) { return; }
-				await configureWithToken(token);
 			}
 
-			async function configureWithToken(token: string) {
-				try {
-					await cli.configure(token);
-					vscode.window.showInformationMessage('Exercism configured successfully! Your exercises will appear in the sidebar.');
-					treeProvider.refresh();
-				} catch (err: unknown) {
-					const msg = err instanceof Error ? err.message : String(err);
-					vscode.window.showErrorMessage(`Failed to configure: ${msg}`);
+			const token = await vscode.window.showInputBox({
+				prompt: action === 'Get API Token'
+					? 'Paste your API token from exercism.org/settings/api_cli'
+					: 'Enter your Exercism API token',
+				placeHolder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+				password: true,
+				ignoreFocusOut: true,
+			});
+			if (!token) { return; }
+
+			await vscode.window.withProgress(
+				{
+					location: vscode.ProgressLocation.Notification,
+					title: 'Configuring Exercism...',
+				},
+				async () => {
+					try {
+						await cli.configure(token);
+						cli.clearCache();
+						await updateConfiguredContext();
+						vscode.window.showInformationMessage('Exercism configured successfully! Use "Download Exercise" to get started.');
+						treeProvider.refresh();
+					} catch (err: unknown) {
+						const msg = err instanceof Error ? err.message : String(err);
+						vscode.window.showErrorMessage(`Failed to configure: ${msg}`);
+					}
 				}
-			}
+			);
 		})
 	);
 
@@ -185,17 +212,58 @@ export function activate(context: vscode.ExtensionContext): void {
 			// Step 2: Fetch and show exercise list for selected track
 			let exerciseItems: vscode.QuickPickItem[];
 			try {
-				const exercises = await cli.fetchExercises(track);
-				// Mark already-downloaded exercises
+				let token = '';
+				try {
+					const config = await cli.getConfig();
+					token = config.token;
+				} catch { /* no token */ }
+
+				const exercises = await cli.fetchExercises(track, token || undefined);
+				// Get local + solution data for status icons
 				const scannedTracks = await scanner.scan();
 				const localTrack = scannedTracks.find(t => t.slug === track);
 				const localSlugs = new Set(localTrack?.exercises.map(e => e.slug) ?? []);
 
-				exerciseItems = exercises.map(e => ({
-					label: `${localSlugs.has(e.slug) ? '$(check) ' : '$(cloud-download) '}${e.title}`,
-					description: e.difficulty,
-					detail: e.slug,
-				}));
+				let solutionMap = new Map<string, string>();
+				if (token) {
+					try { solutionMap = await cli.fetchUserSolutions(track, token); } catch { /* ignore */ }
+				}
+
+				// Sort: recommended first, then rest in original order
+				const sorted = [...exercises].sort((a, b) => {
+					if (a.isRecommended && !b.isRecommended) { return -1; }
+					if (!a.isRecommended && b.isRecommended) { return 1; }
+					return 0;
+				});
+
+				exerciseItems = sorted.map(e => {
+					const solutionStatus = solutionMap.get(e.slug);
+					const isLocal = localSlugs.has(e.slug);
+
+					// Match tree view icons
+					let icon: string;
+					if (e.isRecommended) {
+						icon = '$(star-full)';
+					} else if (solutionStatus === 'published' || solutionStatus === 'completed') {
+						icon = '$(check)';
+					} else if (solutionStatus === 'started' || solutionStatus === 'iterated' || isLocal) {
+						icon = '$(tools)';
+					} else if (e.isUnlocked) {
+						icon = '$(circle-outline)';
+					} else {
+						icon = '$(lock)';
+					}
+
+					return {
+						label: `${icon} ${e.title}`,
+						description: [
+							e.difficulty,
+							e.isRecommended ? 'recommended' : '',
+							isLocal ? 'downloaded' : '',
+						].filter(Boolean).join(' · '),
+						detail: e.slug,
+					};
+				});
 			} catch {
 				// Fallback to manual input
 				const input = await vscode.window.showInputBox({
@@ -215,6 +283,10 @@ export function activate(context: vscode.ExtensionContext): void {
 			if (!exercisePick) { return; }
 			const exercise = exercisePick.detail!;
 
+			let downloadPath = '';
+			let downloadError = '';
+			let cancelled = false;
+
 			await vscode.window.withProgress(
 				{
 					location: vscode.ProgressLocation.Notification,
@@ -223,31 +295,37 @@ export function activate(context: vscode.ExtensionContext): void {
 				},
 				async (_progress, token) => {
 					try {
-						const downloadPath = await cli.download(track, exercise, token);
+						downloadPath = await cli.download(track, exercise, token);
 						cli.clearCache();
 						treeProvider.refresh();
-
-						const action = await vscode.window.showInformationMessage(
-							`Downloaded ${track}/${exercise}`,
-							'Open Folder',
-							'View Instructions'
-						);
-						if (action === 'Open Folder') {
-							const uri = vscode.Uri.file(downloadPath);
-							vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
-						} else if (action === 'View Instructions') {
-							const ex = buildExerciseFromPath(downloadPath, track, exercise);
-							ExercisePreviewPanel.show(ex, context.extensionUri);
-						}
 					} catch (err: unknown) {
 						if (token.isCancellationRequested) {
+							cancelled = true;
 							return;
 						}
-						const msg = err instanceof Error ? err.message : String(err);
-						vscode.window.showErrorMessage(`Download failed: ${msg}`);
+						downloadError = err instanceof Error ? err.message : String(err);
 					}
 				}
 			);
+
+			if (cancelled) { return; }
+			if (downloadError) {
+				vscode.window.showErrorMessage(`Download failed: ${downloadError}`);
+				return;
+			}
+
+			const action = await vscode.window.showInformationMessage(
+				`Downloaded ${track}/${exercise}`,
+				'Open Folder',
+				'View Instructions'
+			);
+			if (action === 'Open Folder') {
+				const uri = vscode.Uri.file(downloadPath);
+				vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
+			} else if (action === 'View Instructions') {
+				const ex = buildExerciseFromPath(downloadPath, track, exercise);
+				ExercisePreviewPanel.show(ex, context.extensionUri);
+			}
 		})
 	);
 

@@ -2,7 +2,7 @@
   "name": "exercism-helper",
   "displayName": "Exercism Helper",
   "description": "Complete programming challenges in different languages to improve your skills — browse, download, test, and submit Exercism exercises without leaving VS Code.",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "publisher": "skywalkerw",
   "license": "MIT",
   "engines": {
@@ -25,7 +25,11 @@
     "url": "https://github.com/skyswordw/vscode-exercism-helper"
   },
   "activationEvents": [
-    "workspaceContains:**/.exercism/metadata.json"
+    "workspaceContains:**/.exercism/metadata.json",
+    "onView:exercismExplorer",
+    "onCommand:exercism.configure",
+    "onCommand:exercism.download",
+    "onCommand:exercism.refreshTree"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -106,7 +110,13 @@
     "viewsWelcome": [
       {
         "view": "exercismExplorer",
-        "contents": "Welcome to Exercism Helper!\n\nTo get started:\n1. [Install Exercism CLI](https://exercism.org/docs/using/solving-exercises/working-locally) if you haven't already\n2. [Get your API Token](https://exercism.org/settings/api_cli) from exercism.org\n3. Click below to configure:\n\n[Configure Exercism](command:exercism.configure)\n\nAlready configured? Click refresh if your exercises don't appear.\n[Refresh](command:exercism.refreshTree)"
+        "contents": "Welcome to Exercism Helper!\n\nSet up your API token to get started:\n\n[Configure Exercism](command:exercism.configure)",
+        "when": "!exercism.configured"
+      },
+      {
+        "view": "exercismExplorer",
+        "contents": "No exercises yet.\n\nBrowse tracks and download an exercise:\n\n[Download Exercise](command:exercism.download)",
+        "when": "exercism.configured"
       }
     ],
     "menus": {

@@ -12,27 +12,70 @@ const MarkdownIt = require('markdown-it') as typeof import('markdown-it');
 const hljs: HLJSApi = require('highlight.js/lib/core').default ?? require('highlight.js/lib/core');
 
 // Register only languages used by Exercism tracks
-const exercismLanguages: Record<string, string> = {
-  bash: 'bash', c: 'c', clojure: 'clojure', coffeescript: 'coffeescript',
-  coq: 'coq', cpp: 'cpp', crystal: 'crystal', csharp: 'csharp',
-  d: 'd', dart: 'dart', delphi: 'delphi', elixir: 'elixir', elm: 'elm',
-  erlang: 'erlang', fortran: 'fortran', fsharp: 'fsharp', go: 'go',
-  groovy: 'groovy', haskell: 'haskell', java: 'java',
-  javascript: 'javascript', julia: 'julia', kotlin: 'kotlin',
-  lisp: 'lisp', lua: 'lua', mipsasm: 'mipsasm', nim: 'nim',
-  objectivec: 'objectivec', ocaml: 'ocaml', perl: 'perl', php: 'php',
-  powershell: 'powershell', prolog: 'prolog', python: 'python', r: 'r',
-  reasonml: 'reasonml', ruby: 'ruby', rust: 'rust', scala: 'scala',
-  scheme: 'scheme', smalltalk: 'smalltalk', sml: 'sml', swift: 'swift',
-  tcl: 'tcl', typescript: 'typescript', vbnet: 'vbnet', vim: 'vim',
-  wasm: 'wasm', wren: 'wren', x86asm: 'x86asm',
-  // Common extras for code blocks in exercise READMEs
-  json: 'json', xml: 'xml', yaml: 'yaml', sql: 'sql', shell: 'shell',
-  makefile: 'makefile', plaintext: 'plaintext', diff: 'diff',
+// Static imports so esbuild can bundle them (dynamic require breaks in VSIX)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const langs: Record<string, any> = {
+  bash: require('highlight.js/lib/languages/bash'),
+  c: require('highlight.js/lib/languages/c'),
+  clojure: require('highlight.js/lib/languages/clojure'),
+  coffeescript: require('highlight.js/lib/languages/coffeescript'),
+  coq: require('highlight.js/lib/languages/coq'),
+  cpp: require('highlight.js/lib/languages/cpp'),
+  crystal: require('highlight.js/lib/languages/crystal'),
+  csharp: require('highlight.js/lib/languages/csharp'),
+  d: require('highlight.js/lib/languages/d'),
+  dart: require('highlight.js/lib/languages/dart'),
+  delphi: require('highlight.js/lib/languages/delphi'),
+  diff: require('highlight.js/lib/languages/diff'),
+  elixir: require('highlight.js/lib/languages/elixir'),
+  elm: require('highlight.js/lib/languages/elm'),
+  erlang: require('highlight.js/lib/languages/erlang'),
+  fortran: require('highlight.js/lib/languages/fortran'),
+  fsharp: require('highlight.js/lib/languages/fsharp'),
+  go: require('highlight.js/lib/languages/go'),
+  groovy: require('highlight.js/lib/languages/groovy'),
+  haskell: require('highlight.js/lib/languages/haskell'),
+  java: require('highlight.js/lib/languages/java'),
+  javascript: require('highlight.js/lib/languages/javascript'),
+  json: require('highlight.js/lib/languages/json'),
+  julia: require('highlight.js/lib/languages/julia'),
+  kotlin: require('highlight.js/lib/languages/kotlin'),
+  lisp: require('highlight.js/lib/languages/lisp'),
+  lua: require('highlight.js/lib/languages/lua'),
+  makefile: require('highlight.js/lib/languages/makefile'),
+  mipsasm: require('highlight.js/lib/languages/mipsasm'),
+  nim: require('highlight.js/lib/languages/nim'),
+  objectivec: require('highlight.js/lib/languages/objectivec'),
+  ocaml: require('highlight.js/lib/languages/ocaml'),
+  perl: require('highlight.js/lib/languages/perl'),
+  php: require('highlight.js/lib/languages/php'),
+  plaintext: require('highlight.js/lib/languages/plaintext'),
+  powershell: require('highlight.js/lib/languages/powershell'),
+  prolog: require('highlight.js/lib/languages/prolog'),
+  python: require('highlight.js/lib/languages/python'),
+  r: require('highlight.js/lib/languages/r'),
+  reasonml: require('highlight.js/lib/languages/reasonml'),
+  ruby: require('highlight.js/lib/languages/ruby'),
+  rust: require('highlight.js/lib/languages/rust'),
+  scala: require('highlight.js/lib/languages/scala'),
+  scheme: require('highlight.js/lib/languages/scheme'),
+  shell: require('highlight.js/lib/languages/shell'),
+  smalltalk: require('highlight.js/lib/languages/smalltalk'),
+  sml: require('highlight.js/lib/languages/sml'),
+  sql: require('highlight.js/lib/languages/sql'),
+  swift: require('highlight.js/lib/languages/swift'),
+  tcl: require('highlight.js/lib/languages/tcl'),
+  typescript: require('highlight.js/lib/languages/typescript'),
+  vbnet: require('highlight.js/lib/languages/vbnet'),
+  vim: require('highlight.js/lib/languages/vim'),
+  wasm: require('highlight.js/lib/languages/wasm'),
+  wren: require('highlight.js/lib/languages/wren'),
+  xml: require('highlight.js/lib/languages/xml'),
+  x86asm: require('highlight.js/lib/languages/x86asm'),
+  yaml: require('highlight.js/lib/languages/yaml'),
 };
-for (const [name, mod] of Object.entries(exercismLanguages)) {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  hljs.registerLanguage(name, require(`highlight.js/lib/languages/${mod}`));
+for (const [name, langDef] of Object.entries(langs)) {
+  hljs.registerLanguage(name, langDef);
 }
 
 type MdInstance = InstanceType<typeof MarkdownIt>;
