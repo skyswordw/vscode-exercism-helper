@@ -8,6 +8,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,6 +20,10 @@ jobs:
       - run: npm run compile
       - run: npm test
 
+      # Package VSIX
+      - name: Package VSIX
+        run: npx vsce package -o exercism-helper.vsix
+
       # Publish to VS Code Marketplace
       - name: Publish to VS Code Marketplace
         run: npx vsce publish -p ${{ secrets.VSCE_PAT }}
@@ -25,3 +31,10 @@ jobs:
       # Publish to Open VSX
       - name: Publish to Open VSX
         run: npx ovsx publish -p ${{ secrets.OVSX_PAT }}
+
+      # Create GitHub Release with VSIX
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: exercism-helper.vsix
