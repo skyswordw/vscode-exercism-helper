@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { ExercismCli } from './cli/exercismCli';
+import { ExercismCli, isTrackNotJoinedError } from './cli/exercismCli';
+import { promptJoinAndDownload } from './commands/joinTrack';
 import { WorkspaceScanner } from './workspace/workspaceScanner';
 import { ExercismTreeProvider } from './views/exercismTreeProvider';
 import { ExerciseItem } from './views/exerciseItem';
@@ -172,6 +173,38 @@ export function activate(context: vscode.ExtensionContext): void {
 		})
 	);
 
+	async function openDownloadedTrackExercise(downloadPath: string, track: string, exercise: string) {
+		const action = await vscode.window.showInformationMessage(
+			`Downloaded ${track}/${exercise}`,
+			'Open Folder',
+			'View Instructions'
+		);
+		if (action === 'Open Folder') {
+			const uri = vscode.Uri.file(downloadPath);
+			vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
+		} else if (action === 'View Instructions') {
+			const ex = buildExerciseFromPath(downloadPath, track, exercise);
+			ExercisePreviewPanel.show(ex, context.extensionUri);
+		}
+	}
+
+	async function openDownloadedExercise(downloadPath: string, track: string, slug: string) {
+		const action = await vscode.window.showInformationMessage(
+			`Downloaded ${slug}`,
+			'Open Exercise'
+		);
+		if (action === 'Open Exercise') {
+			const ex = buildExerciseFromPath(downloadPath, track, slug);
+			const solutionFiles = findSolutionFiles(downloadPath);
+			if (solutionFiles.length > 0) {
+				const doc = await vscode.workspace.openTextDocument(solutionFiles[0]);
+				await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+			}
+			ExercisePreviewPanel.show(ex, context.extensionUri);
+		}
+	}
+
+
 	context.subscriptions.push(
 		vscode.commands.registerCommand('exercism.download', async () => {
 			log('Command: exercism.download triggered');
@@ -184,10 +217,28 @@ export function activate(context: vscode.ExtensionContext): void {
 			// Step 1: Fetch and show track list from Exercism API
 			let trackItems: vscode.QuickPickItem[];
 			try {
-				const tracks = await cli.fetchTracks();
+				let token = '';
+				try {
+					const config = await cli.getConfig();
+					token = config.token;
+				} catch { /* no token */ }
+
+				const tracks = await cli.fetchTracks(token || undefined);
+				if (tracks.length === 0) {
+					throw new Error('No tracks returned from API');
+				}
+				// Sort joined tracks first, then alphabetically
+				tracks.sort((a, b) => {
+					if (a.isJoined && !b.isJoined) { return -1; }
+					if (!a.isJoined && b.isJoined) { return 1; }
+					return a.title.localeCompare(b.title);
+				});
+
 				trackItems = tracks.map(t => ({
 					label: t.title,
-					description: `${t.numExercises} exercises`,
+					description: t.isJoined
+						? `${t.numExercises} exercises $(check) Joined`
+						: `${t.numExercises} exercises`,
 					detail: t.slug,
 				}));
 			} catch {
@@ -200,6 +251,11 @@ export function activate(context: vscode.ExtensionContext): void {
 				}));
 			}
 			log(`Fetched ${trackItems.length} tracks for download picker`);
+
+			if (trackItems.length === 0) {
+				vscode.window.showWarningMessage('No language tracks found. Please check your internet connection.');
+				return;
+			}
 
 			const trackPick = await vscode.window.showQuickPick(trackItems, {
 				placeHolder: 'Select a language track',
@@ -219,6 +275,9 @@ export function activate(context: vscode.ExtensionContext): void {
 				} catch { /* no token */ }
 
 				const exercises = await cli.fetchExercises(track, token || undefined);
+				if (exercises.length === 0) {
+					throw new Error('No exercises returned from API');
+				}
 				// Get local + solution data for status icons
 				const scannedTracks = await scanner.scan();
 				const localTrack = scannedTracks.find(t => t.slug === track);
@@ -275,6 +334,11 @@ export function activate(context: vscode.ExtensionContext): void {
 			}
 			log(`Fetched ${exerciseItems.length} exercises for track ${track}`);
 
+			if (exerciseItems.length === 0) {
+				vscode.window.showWarningMessage(`No exercises found for track ${trackPick.label}.`);
+				return;
+			}
+
 			const exercisePick = await vscode.window.showQuickPick(exerciseItems, {
 				placeHolder: `Select an exercise from ${trackPick.label}`,
 				matchOnDescription: true,
@@ -310,22 +374,17 @@ export function activate(context: vscode.ExtensionContext): void {
 
 			if (cancelled) { return; }
 			if (downloadError) {
+				if (isTrackNotJoinedError(downloadError)) {
+					await promptJoinAndDownload(cli, () => treeProvider.refresh(), track, exercise, async (newPath) => {
+						await openDownloadedTrackExercise(newPath, track, exercise);
+					});
+					return;
+				}
 				vscode.window.showErrorMessage(`Download failed: ${downloadError}`);
 				return;
 			}
 
-			const action = await vscode.window.showInformationMessage(
-				`Downloaded ${track}/${exercise}`,
-				'Open Folder',
-				'View Instructions'
-			);
-			if (action === 'Open Folder') {
-				const uri = vscode.Uri.file(downloadPath);
-				vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
-			} else if (action === 'View Instructions') {
-				const ex = buildExerciseFromPath(downloadPath, track, exercise);
-				ExercisePreviewPanel.show(ex, context.extensionUri);
-			}
+			await openDownloadedTrackExercise(downloadPath, track, exercise);
 		})
 	);
 
@@ -428,6 +487,8 @@ export function activate(context: vscode.ExtensionContext): void {
 			if (!exerciseArg) { return; }
 			log(`Command: exercism.downloadExercise triggered for ${exerciseArg.track}/${exerciseArg.slug}`);
 
+			let downloadPath = '';
+			let downloadError = '';
 			await vscode.window.withProgress(
 				{
 					location: vscode.ProgressLocation.Notification,
@@ -436,31 +497,36 @@ export function activate(context: vscode.ExtensionContext): void {
 				},
 				async (_progress, token) => {
 					try {
-						const downloadPath = await cli.download(exerciseArg.track, exerciseArg.slug, token);
+						downloadPath = await cli.download(exerciseArg.track, exerciseArg.slug, token);
 						cli.clearCache();
 						treeProvider.refresh();
-
-						const action = await vscode.window.showInformationMessage(
-							`Downloaded ${exerciseArg.slug}`,
-							'Open Exercise'
-						);
-						if (action === 'Open Exercise') {
-							const ex = buildExerciseFromPath(downloadPath, exerciseArg.track, exerciseArg.slug);
-							// Open solution file + instructions
-							const solutionFiles = findSolutionFiles(downloadPath);
-							if (solutionFiles.length > 0) {
-								const doc = await vscode.workspace.openTextDocument(solutionFiles[0]);
-								await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
-							}
-							ExercisePreviewPanel.show(ex, context.extensionUri);
-						}
 					} catch (err: unknown) {
 						if (token.isCancellationRequested) { return; }
-						const msg = err instanceof Error ? err.message : String(err);
-						vscode.window.showErrorMessage(`Download failed: ${msg}`);
+						downloadError = err instanceof Error ? err.message : String(err);
 					}
 				}
 			);
+
+			if (downloadPath) {
+				await openDownloadedExercise(downloadPath, exerciseArg.track, exerciseArg.slug);
+				return;
+			}
+
+			if (downloadError) {
+				if (isTrackNotJoinedError(downloadError)) {
+					await promptJoinAndDownload(
+						cli,
+						() => treeProvider.refresh(),
+						exerciseArg.track,
+						exerciseArg.slug,
+						async (newPath) => {
+							await openDownloadedExercise(newPath, exerciseArg.track, exerciseArg.slug);
+						}
+					);
+					return;
+				}
+				vscode.window.showErrorMessage(`Download failed: ${downloadError}`);
+			}
 		})
 	);
 

@@ -28,6 +28,13 @@ interface CacheEntry<T> {
 }
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const API_BASE_URL = 'https://api.exercism.org';
+const API_TIMEOUT_MS = 10000;
+
+interface TrackRequestOptions {
+  cancellationToken?: vscode.CancellationToken;
+  timeoutMs?: number;
+}
 
 export class ExercismCli {
   private _cache = new Map<string, CacheEntry<any>>();
@@ -125,12 +132,34 @@ export class ExercismCli {
     return value;
   }
 
-  async fetchTracks(): Promise<Array<{ slug: string; title: string; numExercises: number }>> {
-    const cached = this.getCached<Array<{ slug: string; title: string; numExercises: number }>>('tracks');
-    if (cached) { return cached; }
+  async fetchTracks(token?: string, bypassCache = false, requestOptions: TrackRequestOptions = {}): Promise<Array<{ slug: string; title: string; numExercises: number; isJoined?: boolean }>> {
+    const cacheKey = `tracks:${token ? 'auth' : 'anon'}`;
+    if (!bypassCache) {
+      const cached = this.getCached<Array<{ slug: string; title: string; numExercises: number; isJoined?: boolean }>>(cacheKey);
+      if (cached) { return cached; }
+    }
     const https = await import('https');
-    return new Promise((resolve, reject) => {
-      https.get('https://exercism.org/api/v2/tracks', (res) => {
+    if (requestOptions.cancellationToken?.isCancellationRequested) {
+      throw new Error('Operation cancelled');
+    }
+    const controller = new AbortController();
+    const cancellation = requestOptions.cancellationToken?.onCancellationRequested(() => controller.abort());
+    // Bound the entire request, including DNS, connection setup and response body.
+    const timer = setTimeout(() => controller.abort(), Math.min(requestOptions.timeoutMs ?? API_TIMEOUT_MS, API_TIMEOUT_MS));
+    return new Promise<Array<{ slug: string; title: string; numExercises: number; isJoined?: boolean }>>((resolve, reject) => {
+      const headers: Record<string, string> = {
+        'User-Agent': 'vscode-exercism-helper',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const options = { headers, signal: controller.signal };
+      https.get(`${API_BASE_URL}/v2/tracks`, options, (res) => {
+        if (res.statusCode && res.statusCode >= 400) {
+          res.resume();
+          reject(new Error(`API returned HTTP ${res.statusCode}`));
+          return;
+        }
         let data = '';
         res.on('data', (chunk: string) => { data += chunk; });
         res.on('end', () => {
@@ -140,14 +169,28 @@ export class ExercismCli {
               slug: t.slug,
               title: t.title,
               numExercises: t.num_exercises || 0,
+              isJoined: Boolean(t.is_joined),
             }));
-            this.setCache('tracks', tracks);
+            this.setCache(cacheKey, tracks);
             resolve(tracks);
-          } catch { resolve([]); }
+          } catch (err) { reject(err); }
         });
         res.on('error', reject);
       }).on('error', reject);
+    }).finally(() => {
+      clearTimeout(timer);
+      cancellation?.dispose();
     });
+  }
+
+  async isTrackJoined(track: string, token: string, requestOptions: TrackRequestOptions = {}): Promise<boolean> {
+    try {
+      const tracks = await this.fetchTracks(token, true, requestOptions);
+      const found = tracks.find(t => t.slug === track);
+      return Boolean(found?.isJoined);
+    } catch {
+      return false;
+    }
   }
 
   async fetchExercises(track: string, token?: string): Promise<Array<{ slug: string; title: string; difficulty: string; isUnlocked: boolean; isRecommended: boolean; type: string; blurb: string }>> {
@@ -156,9 +199,15 @@ export class ExercismCli {
     if (cached) { return cached; }
     const https = await import('https');
     return new Promise((resolve, reject) => {
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        'User-Agent': 'vscode-exercism-helper',
+      };
       if (token) { headers['Authorization'] = `Bearer ${token}`; }
-      https.get(`https://exercism.org/api/v2/tracks/${track}/exercises`, { headers }, (res) => {
+      https.get(`${API_BASE_URL}/v2/tracks/${encodeURIComponent(track)}/exercises`, { headers }, (res) => {
+        if (res.statusCode && res.statusCode >= 400) {
+          reject(new Error(`API returned HTTP ${res.statusCode}`));
+          return;
+        }
         let data = '';
         res.on('data', (chunk: string) => { data += chunk; });
         res.on('end', () => {
@@ -175,7 +224,7 @@ export class ExercismCli {
             }));
             this.setCache(cacheKey, exercises);
             resolve(exercises);
-          } catch { resolve([]); }
+          } catch (err) { reject(err); }
         });
         res.on('error', reject);
       }).on('error', reject);
@@ -186,18 +235,23 @@ export class ExercismCli {
     const cacheKey = `solutions:${track}`;
     const cached = this.getCached<Map<string, string>>(cacheKey);
     if (cached) { return cached; }
-    // GET https://exercism.org/api/v2/solutions?track_slug={track}&per_page=200
+    // GET https://api.exercism.org/v2/solutions?track_slug={track}&per_page=200
     // Header: Authorization: Bearer {token}
     // Returns a Map of exercise slug -> status (published/completed/started/iterated)
     const https = await import('https');
     return new Promise((resolve) => {
-      const url = `https://exercism.org/api/v2/solutions?track_slug=${encodeURIComponent(track)}&per_page=200`;
+      const url = `${API_BASE_URL}/v2/solutions?track_slug=${encodeURIComponent(track)}&per_page=200`;
       const options = {
         headers: {
           'Authorization': `Bearer ${token}`,
+          'User-Agent': 'vscode-exercism-helper',
         },
       };
       https.get(url, options, (res) => {
+        if (res.statusCode && res.statusCode >= 400) {
+          resolve(new Map());
+          return;
+        }
         let data = '';
         res.on('data', (chunk: string) => { data += chunk; });
         res.on('end', () => {
@@ -293,4 +347,13 @@ export class ExercismCli {
       return { success: false, output };
     }
   }
+}
+
+export function isTrackNotJoinedError(err: unknown): boolean {
+  if (!err) { return false; }
+  const message = err instanceof Error ? err.message : String(err);
+  const stdout = typeof (err as any)?.stdout === 'string' ? (err as any).stdout : '';
+  const stderr = typeof (err as any)?.stderr === 'string' ? (err as any).stderr : '';
+  const combined = `${message} ${stdout} ${stderr}`;
+  return /not joined this track|track_not_joined/i.test(combined);
 }
